@@ -10,7 +10,7 @@ import {
   ShieldCheck,
   UserRound,
 } from 'lucide-vue-next'
-import { login } from '@/stores/backendStore'
+import { canAccess, login } from '@/stores/backendStore'
 
 const router = useRouter()
 const route = useRoute()
@@ -35,7 +35,13 @@ async function handleLogin() {
     const user = await login(form.username.trim(), form.password)
     ElMessage.success(`欢迎回来，${user.realName}`)
     const fallback = user.roleCode === 'EMPLOYEE' ? '/my-assets' : '/dashboard'
-    await router.replace(route.query.redirect || fallback)
+    const requested = typeof route.query.redirect === 'string' ? route.query.redirect : null
+    const permission = requested ? router.resolve(requested).meta.permission : null
+    const target =
+      requested && requested.startsWith('/') && (!permission || canAccess(permission))
+        ? requested
+        : fallback
+    await router.replace(target)
   } catch (error) {
     ElMessage.error(error.message)
   } finally {
