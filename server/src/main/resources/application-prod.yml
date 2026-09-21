@@ -11,5 +11,10 @@ app:
   cache:
     provider: redis
 
+management:
+  health:
+    redis:
+      enabled: true
+
 server:
   port: 8081

@@ -33,6 +33,9 @@ springdoc:
     path: /swagger-ui.html
 
 management:
+  health:
+    redis:
+      enabled: ${REDIS_HEALTH_ENABLED:false}
   endpoints:
     web:
       exposure:
