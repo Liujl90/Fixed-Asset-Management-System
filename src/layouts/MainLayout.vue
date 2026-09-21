@@ -7,6 +7,7 @@ import {
   Bell,
   Boxes,
   Building2,
+  CalendarClock,
   ChevronRight,
   ClipboardCheck,
   LayoutDashboard,
@@ -45,6 +46,7 @@ const adminGroups = [
     items: [
       { label: '领用与归还', route: '/loans', icon: ClipboardCheck },
       { label: '资产调拨', route: '/transfers', icon: ArrowRightLeft },
+      { label: '运维任务', route: '/operations', icon: CalendarClock },
     ],
   },
   {

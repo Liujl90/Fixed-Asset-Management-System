@@ -3,12 +3,14 @@ import { computed, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Boxes,
+  Download,
   Eye,
   Filter,
   Pencil,
   Plus,
   Search,
   Trash2,
+  Upload,
 } from 'lucide-vue-next'
 import StatusTag from '@/components/StatusTag.vue'
 import {
@@ -19,7 +21,9 @@ import {
   demoState,
   departmentName,
   employeeName,
+  exportAssets,
   getAsset,
+  importAssets,
   updateAsset,
 } from '@/stores/backendStore'
 import { formatCurrency, formatDate } from '@/utils/format'
@@ -37,6 +41,7 @@ const detailVisible = ref(false)
 const editingId = ref(null)
 const selectedAssetId = ref(null)
 const formRef = ref()
+const fileInput = ref()
 
 const emptyForm = () => ({
   assetNo: '',
@@ -168,6 +173,32 @@ async function remove(row) {
     if (error instanceof Error) ElMessage.error(error.message)
   }
 }
+
+async function handleExport() {
+  try {
+    await exportAssets()
+    ElMessage.success('资产 Excel 已导出')
+  } catch (error) {
+    ElMessage.error(error.message)
+  }
+}
+
+function openImport() {
+  fileInput.value?.click()
+}
+
+async function handleImport(event) {
+  const file = event.target.files?.[0]
+  if (!file) return
+  try {
+    const result = await importAssets(file)
+    ElMessage.success(`成功导入 ${result.imported || 0} 条资产`)
+  } catch (error) {
+    ElMessage.error(error.message)
+  } finally {
+    event.target.value = ''
+  }
+}
 </script>
 
 <template>
@@ -178,10 +209,27 @@ async function remove(row) {
         <h2>固定资产台账</h2>
         <p>维护资产基础信息、当前状态、所属部门和负责人。</p>
       </div>
-      <el-button type="primary" @click="openCreate">
-        <Plus :size="17" />
-        登记资产
-      </el-button>
+      <div class="heading-actions">
+        <input
+          ref="fileInput"
+          class="hidden-file-input"
+          type="file"
+          accept=".xlsx,.xls"
+          @change="handleImport"
+        />
+        <el-button @click="handleExport">
+          <Download :size="16" />
+          导出 Excel
+        </el-button>
+        <el-button @click="openImport">
+          <Upload :size="16" />
+          导入 Excel
+        </el-button>
+        <el-button type="primary" @click="openCreate">
+          <Plus :size="17" />
+          登记资产
+        </el-button>
+      </div>
     </section>
 
     <section class="asset-summary-strip">

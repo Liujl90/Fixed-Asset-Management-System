@@ -28,6 +28,12 @@ const menuActionMap = {
   assets: ['asset:read', 'asset:write'],
   loans: ['loan:read', 'loan:manage', 'loan:apply', 'loan:return'],
   transfers: ['transfer:read', 'transfer:write'],
+  operations: [
+    'maintenance:read',
+    'maintenance:write',
+    'depreciation:read',
+    'depreciation:run',
+  ],
   system: ['user:read', 'user:write', 'role:read', 'role:write', 'log:read'],
   'my-assets': ['asset:read', 'loan:read', 'loan:return'],
   profile: ['profile:update'],
@@ -57,6 +63,8 @@ export const demoState = reactive({
   loanRecords: [],
   transferRecords: [],
   changeRecords: [],
+  maintenancePlans: [],
+  depreciationRecords: [],
   users: [],
   roles: [],
   permissions: [],
@@ -90,6 +98,10 @@ function normalizeLoan(item) {
 }
 
 function normalizeTransfer(item) {
+  return { ...item, status: normalizeStatus(item.status) }
+}
+
+function normalizeMaintenancePlan(item) {
   return { ...item, status: normalizeStatus(item.status) }
 }
 
@@ -156,6 +168,18 @@ export async function loadAll() {
       const summary = await api.get('/dashboard/summary')
       demoState.dashboardSummary = summary
       demoState.changeRecords = summary.recentChanges || []
+    }),
+    safeLoad('maintenance:read', async () => {
+      const payload = await api.get('/operations/maintenance-plans', {
+        params: { page: 1, size: 100 },
+      })
+      demoState.maintenancePlans = pageRecords(payload).map(normalizeMaintenancePlan)
+    }),
+    safeLoad('depreciation:read', async () => {
+      const payload = await api.get('/operations/depreciations', {
+        params: { page: 1, size: 100 },
+      })
+      demoState.depreciationRecords = pageRecords(payload)
     }),
   ]
   await Promise.all(tasks)
@@ -402,6 +426,54 @@ export async function createTransfer(payload) {
   const item = await api.post('/transfers', payload)
   await loadAll()
   return item
+}
+
+export async function createMaintenancePlan(payload) {
+  const item = await api.post('/operations/maintenance-plans', payload)
+  await loadAll()
+  return item
+}
+
+export async function updateMaintenancePlan(id, payload) {
+  const item = await api.put(`/operations/maintenance-plans/${id}`, payload)
+  await loadAll()
+  return item
+}
+
+export async function completeMaintenancePlan(id) {
+  const item = await api.patch(`/operations/maintenance-plans/${id}/complete`)
+  await loadAll()
+  return item
+}
+
+export async function runDepreciation(month) {
+  const result = await api.post('/operations/jobs/depreciation', { month })
+  await loadAll()
+  return result
+}
+
+export async function runMaintenanceCheck() {
+  const result = await api.post('/operations/jobs/maintenance-check')
+  await loadAll()
+  return result
+}
+
+export async function exportAssets() {
+  const blob = await api.get('/assets/export', { responseType: 'blob' })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = `固定资产-${new Date().toISOString().slice(0, 10)}.xlsx`
+  anchor.click()
+  URL.revokeObjectURL(url)
+}
+
+export async function importAssets(file) {
+  const formData = new FormData()
+  formData.append('file', file)
+  const result = await api.post('/assets/import', formData)
+  await loadAll()
+  return result
 }
 
 export async function addUser(payload) {

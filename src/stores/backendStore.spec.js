@@ -29,11 +29,19 @@ describe('backendStore permission compatibility', () => {
       id: 2,
       username: 'manager',
       roleCode: 'ASSET_MANAGER',
-      permissions: ['asset:read', 'asset:write', 'loan:read', 'loan:manage'],
+      permissions: [
+        'asset:read',
+        'asset:write',
+        'loan:read',
+        'loan:manage',
+        'maintenance:read',
+        'depreciation:read',
+      ],
     }
 
     expect(canAccess('assets')).toBe(true)
     expect(canAccess('loans')).toBe(true)
+    expect(canAccess('operations')).toBe(true)
     expect(canAccess('system')).toBe(false)
   })
 

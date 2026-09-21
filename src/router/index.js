@@ -9,6 +9,7 @@ import CategoriesView from '@/views/CategoriesView.vue'
 import AssetsView from '@/views/AssetsView.vue'
 import LoansView from '@/views/LoansView.vue'
 import TransfersView from '@/views/TransfersView.vue'
+import OperationsView from '@/views/OperationsView.vue'
 import SystemView from '@/views/SystemView.vue'
 import MyAssetsView from '@/views/MyAssetsView.vue'
 import ProfileView from '@/views/ProfileView.vue'
@@ -69,6 +70,12 @@ const routes = [
         name: 'transfers',
         component: TransfersView,
         meta: { title: '资产调拨', permission: 'transfers' },
+      },
+      {
+        path: 'operations',
+        name: 'operations',
+        component: OperationsView,
+        meta: { title: '运维任务', permission: 'operations' },
       },
       {
         path: 'system',

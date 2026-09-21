@@ -10,6 +10,9 @@
 - 资产领用申请、审批、归还申请和归还确认。
 - 在用资产跨部门、跨负责人调拨。
 - Dashboard 统计、资产变动记录和 AOP 操作日志。
+- Redis 缓存 Dashboard 和资产分类，写操作自动失效。
+- Quartz 执行月度折旧和保养到期检查。
+- EasyExcel 支持资产批量导入导出。
 - Flyway 数据库迁移和开发环境 H2 配置。
 
 ## 项目结构
@@ -58,6 +61,11 @@ DB_USERNAME
 DB_PASSWORD
 JWT_SECRET
 JWT_EXPIRATION_MINUTES
+CACHE_PROVIDER
+REDIS_HOST
+REDIS_PORT
+REDIS_PASSWORD
+REDIS_DATABASE
 ```
 
 ## 演示账号
