@@ -35,6 +35,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 采购与入库服务。
+ *
+ * <p>采购单采用主从结构，状态依次为 DRAFT、PENDING、APPROVED、REJECTED、COMPLETED。
+ * 只有审核通过的采购单才能创建入库单；确认入库后在事务内批量生成资产，保证“采购单、
+ * 入库单、资产主数据”链路可追溯。</p>
+ */
 @Service
 public class SupplyService {
 
@@ -116,6 +123,7 @@ public class SupplyService {
     }
 
     public Map<String, Object> purchaseDetail(Long id) {
+        // 详情同时返回主单和明细，前端无需额外拼接。
         PurchaseOrder order = requirePurchase(id);
         List<PurchaseOrderItem> items = purchaseItemMapper.selectList(
                 Wrappers.<PurchaseOrderItem>lambdaQuery()
@@ -126,6 +134,7 @@ public class SupplyService {
     @Transactional
     @OperationLog(module = "采购管理", action = "创建采购单")
     public PurchaseOrder createPurchase(PurchaseOrderRequest request) {
+        // 采购总金额由明细实时计算，不信任前端传入的汇总值。
         requireSupplier(request.supplierId());
         requireUniqueOrderNo(request.orderNo(), null);
         PurchaseOrder order = new PurchaseOrder();
@@ -147,6 +156,7 @@ public class SupplyService {
     @Transactional
     @OperationLog(module = "采购管理", action = "编辑采购单")
     public PurchaseOrder updatePurchase(Long id, PurchaseOrderRequest request) {
+        // 已提交或审核完成的采购单不可直接修改，避免审批结果被绕过。
         PurchaseOrder order = requirePurchase(id);
         if (!"DRAFT".equals(order.getStatus())) {
             throw new BusinessException("只有草稿采购单可以编辑");
@@ -226,6 +236,7 @@ public class SupplyService {
     @Transactional
     @OperationLog(module = "入库管理", action = "创建入库单")
     public InboundOrder createInbound(InboundOrderRequest request) {
+        // 入库单可以关联采购单，也可以作为独立入库单使用。
         requireSupplier(request.supplierId());
         if (request.purchaseOrderId() != null) {
             PurchaseOrder purchase = requirePurchase(request.purchaseOrderId());
@@ -253,6 +264,7 @@ public class SupplyService {
     @Transactional
     @OperationLog(module = "入库管理", action = "确认入库")
     public Map<String, Object> confirmInbound(Long id) {
+        // 确认入库是采购链路和资产台账之间的边界：按数量逐条生成资产。
         InboundOrder order = requireInbound(id);
         if (!"DRAFT".equals(order.getStatus())) {
             throw new BusinessException("只有草稿入库单可以确认");
@@ -267,6 +279,7 @@ public class SupplyService {
         for (int itemIndex = 0; itemIndex < items.size(); itemIndex++) {
             InboundOrderItem item = items.get(itemIndex);
             for (int index = 1; index <= item.getQuantity(); index++) {
+                // 使用入库单号 + 明细序号生成业务可识别的资产编号，唯一约束负责兜底。
                 Asset asset = new Asset();
                 asset.setAssetNo(order.getInboundNo() + "-" + (itemIndex + 1) + "-" + index);
                 asset.setName(item.getAssetName());
@@ -286,6 +299,7 @@ public class SupplyService {
         order.setUpdatedAt(LocalDateTime.now());
         inboundOrderMapper.updateById(order);
         if (order.getPurchaseOrderId() != null) {
+            // 同一采购单再次确认入库会被状态校验拦截，保证确认动作幂等。
             PurchaseOrder purchase = requirePurchase(order.getPurchaseOrderId());
             purchase.setStatus("COMPLETED");
             purchase.setUpdatedAt(LocalDateTime.now());

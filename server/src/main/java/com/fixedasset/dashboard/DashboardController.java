@@ -10,6 +10,9 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/dashboard")
+/**
+ * 首页统计接口，统一由服务端聚合并支持缓存。
+ */
 public class DashboardController {
 
     private final DashboardService dashboardService;

@@ -17,6 +17,9 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/employees")
+/**
+ * 员工档案接口：部门归属、工号唯一性、在职状态和负责人引用校验。
+ */
 public class EmployeeController {
 
     private final EmployeeService employeeService;

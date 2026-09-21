@@ -18,6 +18,16 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+ * 资产报废状态机。
+ *
+ * <pre>
+ * PENDING -> APPROVED -> COMPLETED
+ * PENDING -> REJECTED
+ * </pre>
+ *
+ * <p>报废完成是资产状态的唯一终点：只有审核通过后，完成处置才会把资产改为 SCRAPPED。</p>
+ */
 @Service
 public class ScrapService {
 
@@ -39,6 +49,7 @@ public class ScrapService {
 
     @OperationLog(module = "资产报废", action = "提交报废申请")
     public ScrapRecord create(ScrapCreateRequest request) {
+        // 在用资产必须先归还，避免资产仍在使用时被报废。
         Asset asset = assetService.require(request.assetId());
         if ("SCRAPPED".equals(asset.getStatus())) {
             throw new BusinessException("资产已经报废");
@@ -99,6 +110,7 @@ public class ScrapService {
     @Transactional
     @OperationLog(module = "资产报废", action = "完成资产报废")
     public ScrapRecord complete(Long id, ScrapCompleteRequest request) {
+        // 保存处置方式和金额后再将资产置为 SCRAPPED。
         ScrapRecord record = require(id);
         if (!"APPROVED".equals(record.getStatus())) {
             throw new BusinessException("只有审核通过后才能完成报废");

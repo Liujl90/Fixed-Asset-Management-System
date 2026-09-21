@@ -15,6 +15,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 首页统计聚合服务。
+ *
+ * <p>统计数据从数据库实时计算，使用缓存降低重复查询压力。资产、领用、调拨等写操作会
+ * 清理 dashboardSummary，因此不会长期返回旧数据。</p>
+ */
 @Service
 public class DashboardService {
 

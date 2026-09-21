@@ -23,6 +23,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * 资产盘点服务。
+ *
+ * <p>创建盘点任务时会按部门范围生成资产快照；盘点完成时根据实际部门和实际状态计算正常/异常数量。
+ * 盘点不直接修改资产主数据，差异确认属于后续人工处置动作。</p>
+ */
 @Service
 public class InventoryService {
 
@@ -62,6 +68,7 @@ public class InventoryService {
     @Transactional
     @OperationLog(module = "资产盘点", action = "创建盘点任务")
     public InventoryCheck create(InventoryCreateRequest request) {
+        // 快照资产 ID、期望部门和期望状态，防止盘点过程中资产变化导致历史口径漂移。
         if (inventoryCheckMapper.selectCount(Wrappers.<InventoryCheck>lambdaQuery()
                 .eq(InventoryCheck::getCheckNo, request.checkNo())) > 0) {
             throw new BusinessException("盘点单号已存在");
@@ -121,6 +128,7 @@ public class InventoryService {
     @Transactional
     @OperationLog(module = "资产盘点", action = "完成盘点任务")
     public InventoryCheck complete(Long id) {
+        // 未录入的明细按“与期望一致”处理，已人工填写的异常结果保持原值。
         InventoryCheck check = require(id);
         if (!"IN_PROGRESS".equals(check.getStatus())) {
             throw new BusinessException("盘点任务当前不可完成");

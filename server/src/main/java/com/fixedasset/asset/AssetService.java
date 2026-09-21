@@ -27,6 +27,13 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * 固定资产主数据与状态维护服务。
+ *
+ * <p>资产状态是资产生命周期的核心快照：IDLE、IN_USE、MAINTENANCE、SCRAPPED。
+ * 状态和业务记录必须在同一业务边界内保持一致，且任何依赖资产归属的操作都应先调用
+ * {@link #require(Long)} 获取当前资产。</p>
+ */
 @Service
 public class AssetService {
 
@@ -64,6 +71,7 @@ public class AssetService {
             String status,
             Long departmentId
     ) {
+        // 分页、筛选条件下推到数据库，避免前端或应用层加载全表后再过滤。
         Page<Asset> result = assetMapper.selectPage(new Page<>(page, size),
                 Wrappers.<Asset>lambdaQuery()
                         .and(keyword != null && !keyword.isBlank(), query -> query
@@ -101,6 +109,7 @@ public class AssetService {
     @OperationLog(module = "固定资产", action = "登记资产")
     @CacheEvict(cacheNames = "dashboardSummary", allEntries = true)
     public Asset create(Asset asset) {
+        // 新资产先校验编号、分类和负责人归属，再写入主表和变动记录。
         validate(asset, null);
         asset.setId(null);
         asset.setStatus(asset.getStatus() == null ? "IDLE" : asset.getStatus());
@@ -131,6 +140,7 @@ public class AssetService {
         existing.setRemark(payload.getRemark());
         existing.setUpdatedAt(LocalDateTime.now());
         assetMapper.updateById(existing);
+        // 只有状态真实变化时才追加变动记录，避免重复审计噪声。
         if (!oldStatus.equals(payload.getStatus())) {
             addChange(existing, "状态调整",
                     existing.getName() + "状态调整为" + payload.getStatus(), currentOperator());
@@ -195,6 +205,7 @@ public class AssetService {
     }
 
     private void validate(Asset asset, Long excludeId) {
+        // 状态机和引用完整性集中在这里，Controller 不直接决定业务合法性。
         if (asset.getAssetNo() == null || asset.getAssetNo().isBlank()) {
             throw new BusinessException("资产编号不能为空");
         }
@@ -209,6 +220,7 @@ public class AssetService {
             throw new BusinessException("在用资产必须指定所属部门和负责人");
         }
         if (asset.getOwnerId() != null) {
+            // 负责人必须属于资产所属部门，防止跨部门责任关系。
             Employee owner = employeeMapper.selectById(asset.getOwnerId());
             if (owner == null || !"ACTIVE".equals(owner.getStatus())) {
                 throw new BusinessException("资产负责人不存在或已离职");

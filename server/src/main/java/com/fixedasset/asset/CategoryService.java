@@ -14,6 +14,12 @@ import org.springframework.cache.annotation.Cacheable;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * 资产分类服务。
+ *
+ * <p>分类树允许一个父节点拥有多个子节点。删除前必须确认没有子分类和关联资产，
+ * 分类查询通过缓存减少频繁的基础资料读取。</p>
+ */
 @Service
 public class CategoryService {
 
@@ -27,6 +33,7 @@ public class CategoryService {
 
     @Cacheable(cacheNames = "assetCategoryList", key = "#keyword == null ? 'all' : #keyword")
     public List<AssetCategory> list(String keyword) {
+        // 分类为低频变更、高频读取数据，适合 Cache Aside。
         return categoryMapper.selectList(Wrappers.<AssetCategory>lambdaQuery()
                 .and(keyword != null && !keyword.isBlank(), query -> query
                         .like(AssetCategory::getName, keyword)
@@ -76,6 +83,7 @@ public class CategoryService {
     }
 
     private void validate(AssetCategory category, Long excludeId) {
+        // 当前只允许一级分类作为父分类，避免出现循环或多层无限扩展。
         if (category.getParentId() != null) {
             if (category.getParentId().equals(excludeId) || categoryMapper.selectById(category.getParentId()) == null) {
                 throw new BusinessException("上级分类不存在");

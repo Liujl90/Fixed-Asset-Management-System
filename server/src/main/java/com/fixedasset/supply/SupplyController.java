@@ -21,6 +21,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 供应商、采购单和入库单接口。
+ */
 @RestController
 @RequestMapping("/api")
 public class SupplyController {

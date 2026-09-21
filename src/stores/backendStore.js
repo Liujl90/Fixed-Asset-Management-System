@@ -1,6 +1,12 @@
 import { computed, reactive } from 'vue'
 import { api, TOKEN_KEY, USER_KEY } from '@/api/http'
 
+/**
+ * 前端业务状态兼容层。
+ *
+ * 页面原先依赖 demoStore 的同步 API，本文件保持相同的读取接口，但所有写操作都改为
+ * 调用 REST API；这样页面无需感知 HTTP 细节，同时彻底移除 localStorage 业务数据源。
+ */
 const assetStatusMeta = {
   idle: { label: '闲置', type: 'info', color: '#64748b' },
   in_use: { label: '在用', type: 'success', color: '#0f8a72' },
@@ -21,6 +27,7 @@ const transferStatusMeta = {
 }
 
 const menuActionMap = {
+  // 路由权限使用菜单编码，后端使用动作权限；两者在这里集中映射，避免散落在页面中。
   dashboard: ['dashboard:read'],
   departments: ['department:read', 'department:write'],
   employees: ['employee:read', 'employee:write'],
@@ -91,6 +98,7 @@ export const demoState = reactive({
 })
 
 function normalizeStatus(status) {
+  // 数据库统一保存大写枚举，前端渲染使用小写，避免两种命名混用。
   return status ? String(status).toLowerCase() : status
 }
 
@@ -167,6 +175,7 @@ async function safeLoad(permission, loader) {
 }
 
 export async function loadAll() {
+  // 登录后并行加载各业务域，单个模块的权限不足时只跳过该模块，不影响其他页面。
   const tasks = [
     safeLoad('department:read', async () => {
       demoState.departments = (await api.get('/departments')).map(normalizeDepartment)
@@ -280,6 +289,7 @@ export async function bootstrapSession() {
 }
 
 export async function login(username, password) {
+  // 登录成功后先保存 Token 和用户信息，再加载权限范围内的数据。
   const result = await api.post('/auth/login', { username, password })
   localStorage.setItem(TOKEN_KEY, result.token)
   demoState.currentUser = normalizeUser(result.user)
@@ -290,6 +300,7 @@ export async function login(username, password) {
 
 export async function logout() {
   try {
+    // JWT 无状态，服务端登出只做接口语义兼容，客户端仍需清理 Token。
     await api.post('/auth/logout')
   } catch {
     // Stateless logout only requires clearing the client session.
@@ -729,5 +740,6 @@ export const myAssets = computed(() => {
 })
 
 export function canAccess(permission) {
+  // 前端权限只负责菜单和页面展示，最终接口权限始终由 Spring Security 校验。
   return canRead(permission)
 }

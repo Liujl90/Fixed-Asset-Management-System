@@ -20,6 +20,16 @@ import org.springframework.cache.annotation.CacheEvict;
 
 import java.time.LocalDateTime;
 
+/**
+ * 领用与归还状态机。
+ *
+ * <pre>
+ * PENDING --approve--> ACTIVE --requestReturn--> RETURN_PENDING --confirmReturn--> RETURNED
+ * PENDING --reject--> REJECTED
+ * </pre>
+ *
+ * <p>每次状态推进都同步更新资产主表和资产变动记录，避免只改业务单而资产仍是旧状态。</p>
+ */
 @Service
 public class LoanService {
 
@@ -54,6 +64,7 @@ public class LoanService {
     @Transactional
     @OperationLog(module = "领用归还", action = "提交领用申请")
     public LoanRecord apply(LoanApplyRequest request) {
+        // 领用申请只锁业务记录，不提前改变资产状态，避免申请未通过时资产被占用。
         Asset asset = assetService.require(request.assetId());
         if (!"IDLE".equals(asset.getStatus())) {
             throw new BusinessException("只有闲置资产可以申请领用");
@@ -90,6 +101,7 @@ public class LoanService {
     @OperationLog(module = "领用归还", action = "审批领用申请")
     @CacheEvict(cacheNames = "dashboardSummary", allEntries = true)
     public LoanRecord approve(Long id) {
+        // 审批是资产状态和领用记录同时变化的临界点，必须处于同一事务。
         LoanRecord record = require(id);
         if (!"PENDING".equals(record.getStatus())) {
             throw new BusinessException("领用申请状态已变化");
@@ -138,6 +150,7 @@ public class LoanService {
     @Transactional
     @OperationLog(module = "领用归还", action = "提交归还申请")
     public LoanRecord requestReturn(Long id) {
+        // 归还申请先进入待确认状态，管理员确认后才释放资产。
         LoanRecord record = require(id);
         if (!"ACTIVE".equals(record.getStatus())) {
             throw new BusinessException("当前领用记录不可归还");
@@ -155,6 +168,7 @@ public class LoanService {
     @OperationLog(module = "领用归还", action = "确认资产归还")
     @CacheEvict(cacheNames = "dashboardSummary", allEntries = true)
     public LoanRecord confirmReturn(Long id) {
+        // 确认归还后清空当前负责人，资产重新进入 IDLE。
         LoanRecord record = require(id);
         if (!"RETURN_PENDING".equals(record.getStatus())) {
             throw new BusinessException("归还申请状态已变化");

@@ -17,6 +17,9 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/categories")
+/**
+ * 资产分类接口：提供树形分类 CRUD，并避免删除仍有子节点或资产引用的分类。
+ */
 public class CategoryController {
 
     private final CategoryService categoryService;

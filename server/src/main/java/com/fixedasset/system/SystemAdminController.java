@@ -25,6 +25,9 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/system")
+/**
+ * 用户、角色、权限和操作日志管理接口。
+ */
 public class SystemAdminController {
 
     private final SystemAdminService systemAdminService;

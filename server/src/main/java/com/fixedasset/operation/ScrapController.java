@@ -20,6 +20,9 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/operations/scraps")
+/**
+ * 资产报废接口：申请、审核、驳回和完成处置。
+ */
 public class ScrapController {
 
     private final ScrapService scrapService;

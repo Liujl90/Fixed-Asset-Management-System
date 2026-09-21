@@ -18,6 +18,16 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * 维修记录状态机。
+ *
+ * <pre>
+ * PENDING --start--> PROCESSING --complete--> COMPLETED
+ * </pre>
+ *
+ * <p>开始维修时将资产置为 MAINTENANCE，完成时恢复原状态，原状态记录在
+ * {@code asset_status_before} 中，避免维修完成后无法判断资产应回到闲置还是在用。</p>
+ */
 @Service
 public class MaintenanceRecordService {
 
@@ -70,6 +80,7 @@ public class MaintenanceRecordService {
     @Transactional
     @OperationLog(module = "维修管理", action = "开始维修")
     public MaintenanceRecord start(Long id) {
+        // 维修中资产不可被领用或报废，因此开始维修需要同步资产状态。
         MaintenanceRecord record = require(id);
         if (!"PENDING".equals(record.getStatus())) {
             throw new BusinessException("只有待处理维修单可以开始");
@@ -85,6 +96,7 @@ public class MaintenanceRecordService {
     @Transactional
     @OperationLog(module = "维修管理", action = "完成维修")
     public MaintenanceRecord complete(Long id, MaintenanceCompleteRequest request) {
+        // 先保存维修结果，再将资产恢复到维修前状态。
         MaintenanceRecord record = require(id);
         if (!"PROCESSING".equals(record.getStatus())) {
             throw new BusinessException("只有处理中维修单可以完成");

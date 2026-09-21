@@ -24,6 +24,9 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/assets")
+/**
+ * 固定资产接口：包含资产档案、状态调整、变动记录和 EasyExcel 导入导出。
+ */
 public class AssetController {
 
     private final AssetService assetService;

@@ -15,6 +15,9 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    /**
+     * 将业务异常转换为前端可直接展示的提示信息。
+     */
     @ExceptionHandler(BusinessException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiResponse<Void> handleBusiness(BusinessException exception) {
@@ -24,6 +27,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class})
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiResponse<Void> handleBind(Exception exception) {
+        // 汇总字段级校验信息，便于定位表单中的具体错误。
         var bindingResult = exception instanceof MethodArgumentNotValidException methodException
                 ? methodException.getBindingResult()
                 : ((BindException) exception).getBindingResult();
@@ -48,6 +52,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ApiResponse<Void> handleUnknown(Exception exception) {
+        // 当前为演示项目；生产环境应将异常堆栈写入日志，而不是暴露 exception.getMessage()。
         return ApiResponse.error(5000, "系统内部错误：" + exception.getMessage());
     }
 }

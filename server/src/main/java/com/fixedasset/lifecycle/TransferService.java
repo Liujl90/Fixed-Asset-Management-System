@@ -19,6 +19,12 @@ import org.springframework.cache.annotation.CacheEvict;
 
 import java.time.LocalDateTime;
 
+/**
+ * 资产调拨服务。
+ *
+ * <p>调拨不会改变资产“在用”状态，只改变部门和负责人，并生成可追溯的调拨记录。
+ * 目标负责人必须属于目标部门，避免产生非法归属。</p>
+ */
 @Service
 public class TransferService {
 
@@ -48,6 +54,7 @@ public class TransferService {
     @OperationLog(module = "资产调拨", action = "发起资产调拨")
     @CacheEvict(cacheNames = "dashboardSummary", allEntries = true)
     public TransferRecord create(TransferCreateRequest request) {
+        // 校验目标归属后再写调拨记录，最后同步资产当前快照。
         Asset asset = assetService.require(request.assetId());
         if (!"IN_USE".equals(asset.getStatus())) {
             throw new BusinessException("只有在用资产可以调拨");

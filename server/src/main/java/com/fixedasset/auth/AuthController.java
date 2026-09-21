@@ -26,11 +26,13 @@ public class AuthController {
 
     @PostMapping("/login")
     public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+        // 登录接口公开访问，成功后返回 JWT 和当前用户资料。
         return ApiResponse.ok(authService.login(request));
     }
 
     @PostMapping("/logout")
     public ApiResponse<Void> logout() {
+        // 当前为无状态 JWT，退出由客户端删除 Token；Redis 黑名单可作为后续增强。
         return ApiResponse.ok();
     }
 

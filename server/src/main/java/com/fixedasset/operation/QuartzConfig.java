@@ -10,6 +10,12 @@ import org.quartz.TriggerBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * Quartz 内存调度配置。
+ *
+ * <p>演示环境使用 RAMJobStore，应用重启后任务定义由 Spring 重新注册。生产集群环境
+ * 应切换为 JDBC JobStore，并增加 Quartz 集群配置和任务幂等约束。</p>
+ */
 @Configuration
 public class QuartzConfig {
 

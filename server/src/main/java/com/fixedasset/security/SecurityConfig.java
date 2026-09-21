@@ -18,6 +18,12 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
+/**
+ * Spring Security 无状态安全配置。
+ *
+ * <p>系统只使用 JWT，不创建 HttpSession。登录接口和 Swagger 公开，其余接口必须认证，
+ * 方法级权限通过 {@code @PreAuthorize} 控制。</p>
+ */
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
@@ -33,11 +39,13 @@ public class SecurityConfig {
             JwtAuthenticationFilter jwtAuthenticationFilter,
             ObjectMapper objectMapper
     ) throws Exception {
+        // CSRF 对纯 Bearer Token API 无意义；CORS 允许前后端分离开发。
         return http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // 预检请求、登录、文档和健康检查无需 JWT。
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
                                 "/api/auth/login",
@@ -49,6 +57,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated())
                 .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
                 .exceptionHandling(exceptions -> exceptions
+                        // 认证/授权失败也返回统一 ApiResponse，而不是 HTML 错误页。
                         .authenticationEntryPoint((request, response, exception) -> {
                             response.setStatus(401);
                             response.setContentType("application/json;charset=UTF-8");
@@ -65,6 +74,7 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+        // 演示环境允许任意来源；生产环境应替换为明确的前端域名白名单。
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(List.of("*"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));

@@ -18,6 +18,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/operations/maintenance-records")
+/**
+ * 维修记录接口：创建维修单、开始维修、完成维修并恢复资产状态。
+ */
 public class MaintenanceRecordController {
 
     private final MaintenanceRecordService maintenanceRecordService;

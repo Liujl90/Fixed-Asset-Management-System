@@ -24,6 +24,12 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * 系统管理服务：维护用户、角色、权限关系和操作日志。
+ *
+ * <p>用户角色替换和角色权限替换都处于事务中，避免出现“用户已创建但没有角色”或
+ * “角色已保存但权限关系不完整”的中间状态。</p>
+ */
 @Service
 public class SystemAdminService {
 

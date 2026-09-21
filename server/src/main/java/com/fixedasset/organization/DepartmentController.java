@@ -17,6 +17,11 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/departments")
+/**
+ * 部门管理接口：提供部门查询、新增、编辑和删除。
+ *
+ * 所有写操作要求 {@code department:write}，删除由 Service 校验员工和资产引用。
+ */
 public class DepartmentController {
 
     private final DepartmentService departmentService;

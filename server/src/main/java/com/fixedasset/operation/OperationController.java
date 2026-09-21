@@ -21,6 +21,9 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/operations")
+/**
+ * 运维接口：保养计划、折旧记录以及 Quartz 任务手动触发入口。
+ */
 public class OperationController {
 
     private final MaintenanceService maintenanceService;

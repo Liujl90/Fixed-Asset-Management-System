@@ -22,6 +22,9 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/operations/inventory-checks")
+/**
+ * 资产盘点接口：创建盘点快照、录入差异并完成盘点统计。
+ */
 public class InventoryController {
 
     private final InventoryService inventoryService;

@@ -15,6 +15,12 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * 固定资产 Excel 导入导出服务。
+ *
+ * <p>导出读取数据库后写入响应流；导入先完整解析到内存，再在事务内逐条校验并保存。
+ * 任意一行失败都会抛出业务异常并回滚整批数据，避免导入结果半成功。</p>
+ */
 @Service
 public class AssetExcelService {
 

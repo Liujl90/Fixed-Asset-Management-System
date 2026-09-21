@@ -32,6 +32,7 @@ public class OperationLogAspect {
 
     @Around("@annotation(operationLog)")
     public Object record(ProceedingJoinPoint joinPoint, OperationLog operationLog) throws Throwable {
+        // 切面只记录业务方法结果和耗时，不修改业务返回值。
         long startedAt = System.currentTimeMillis();
         boolean success = true;
         String errorMessage = null;
@@ -54,6 +55,7 @@ public class OperationLogAspect {
             long duration
     ) {
         try {
+            // 日志失败不能反向影响已经成功的业务事务，因此保存日志时独立捕获异常。
             SysOperationLog log = new SysOperationLog();
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             if (authentication != null && authentication.getPrincipal() instanceof AuthenticatedUser user) {
@@ -86,6 +88,7 @@ public class OperationLogAspect {
         } catch (JsonProcessingException exception) {
             text = String.valueOf(value);
         }
+        // 参数入库前脱敏密码和 Token，并限制长度，避免大对象撑爆日志字段。
         text = text.replaceAll("(?i)(password|token)([=: ]+)[^,}\\]]+", "$1$2***");
         return text.length() > 1900 ? text.substring(0, 1900) : text;
     }

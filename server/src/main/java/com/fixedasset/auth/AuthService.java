@@ -57,6 +57,7 @@ public class AuthService {
     }
 
     public LoginResponse login(LoginRequest request) {
+        // 登录不区分“账号不存在”和“密码错误”，避免账号枚举。
         SysUser user = userMapper.selectOne(Wrappers.<SysUser>lambdaQuery()
                 .eq(SysUser::getUsername, request.username()));
         if (user == null || !"ACTIVE".equals(user.getStatus())
@@ -98,6 +99,7 @@ public class AuthService {
     }
 
     private AuthenticatedUser toAuthenticatedUser(SysUser user) {
+        // 用户、角色、权限关系在登录时一次性展开并写入 JWT。
         List<Long> roleIds = userRoleMapper.selectList(Wrappers.<SysUserRole>lambdaQuery()
                         .eq(SysUserRole::getUserId, user.getId()))
                 .stream()

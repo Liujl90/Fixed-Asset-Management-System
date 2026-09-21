@@ -23,6 +23,7 @@ public class PasswordMigrationRunner implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
+        // Flyway 种子数据使用 INIT: 前缀标记初始密码，启动后升级为 BCrypt。
         userMapper.selectList(Wrappers.<SysUser>lambdaQuery()
                         .likeRight(SysUser::getPassword, "INIT:"))
                 .forEach(user -> {

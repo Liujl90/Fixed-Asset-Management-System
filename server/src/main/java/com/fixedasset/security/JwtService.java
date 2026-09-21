@@ -26,6 +26,8 @@ public class JwtService {
 
     public String generateToken(AuthenticatedUser user) {
         Instant now = Instant.now();
+        // 将用户 ID、员工 ID、角色和权限码写入 Token，避免每次请求重复查询 RBAC 关系。
+        // 代价是角色权限变更后必须等待 Token 过期或重新登录才能生效。
         return Jwts.builder()
                 .subject(user.username())
                 .claim("uid", user.userId())
@@ -40,6 +42,7 @@ public class JwtService {
     }
 
     public AuthenticatedUser parseToken(String token) {
+        // 签名校验失败、Token 过期或格式非法时由 JJWT 抛出异常，过滤器统一清空上下文。
         Claims claims = Jwts.parser()
                 .verifyWith(key)
                 .build()

@@ -17,6 +17,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/loans")
+/**
+ * 领用归还接口：申请、审批、驳回、发起归还和确认归还。
+ */
 public class LoanController {
 
     private final LoanService loanService;

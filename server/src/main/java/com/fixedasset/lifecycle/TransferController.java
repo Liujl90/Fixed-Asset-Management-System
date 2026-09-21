@@ -15,6 +15,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/transfers")
+/**
+ * 资产调拨接口：记录原归属并同步更新资产当前部门和负责人。
+ */
 public class TransferController {
 
     private final TransferService transferService;

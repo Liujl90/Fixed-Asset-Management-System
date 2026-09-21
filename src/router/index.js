@@ -123,6 +123,7 @@ const router = createRouter({
 })
 
 router.beforeEach((to) => {
+  // 路由守卫只处理未登录跳转和菜单级权限，不能替代后端接口鉴权。
   const loggedIn = Boolean(demoState.currentUser)
   if (!to.meta.public && !loggedIn) {
     return { name: 'login', query: { redirect: to.fullPath } }
@@ -131,6 +132,7 @@ router.beforeEach((to) => {
     return demoState.currentUser.roleCode === 'ADMIN' ? '/dashboard' : '/my-assets'
   }
   if (to.meta.permission && !canAccess(to.meta.permission)) {
+    // 无权限时回到用户可访问的首页，避免停留在空白路由。
     return canAccess('dashboard') ? '/dashboard' : '/my-assets'
   }
   return true

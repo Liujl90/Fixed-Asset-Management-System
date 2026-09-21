@@ -18,6 +18,12 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.List;
 
+/**
+ * 月度折旧计算服务。
+ *
+ * <p>采用直线法：月折旧 = 原值 / 使用年限 / 12；累计折旧不超过原值。
+ * 报废资产不参与新增折旧，同一资产同一月份通过唯一约束保证幂等。</p>
+ */
 @Service
 public class DepreciationService {
 
@@ -44,6 +50,7 @@ public class DepreciationService {
     @Transactional
     @OperationLog(module = "资产折旧", action = "执行月度折旧")
     public int runMonthlyDepreciation(String requestedMonth) {
+        // requestedMonth 为空时按当前月份执行，也支持补算历史月份。
         YearMonth month = requestedMonth == null || requestedMonth.isBlank()
                 ? YearMonth.now()
                 : YearMonth.parse(requestedMonth);
@@ -57,6 +64,7 @@ public class DepreciationService {
                 .gt(Asset::getOriginalValue, BigDecimal.ZERO));
         int created = 0;
         for (Asset asset : assets) {
+            // 先检查该资产当月是否已有记录，重复执行不会重复扣减。
             long existing = depreciationRecordMapper.selectCount(Wrappers.<DepreciationRecord>lambdaQuery()
                     .eq(DepreciationRecord::getAssetId, asset.getId())
                     .eq(DepreciationRecord::getDepreciationMonth, monthValue));
