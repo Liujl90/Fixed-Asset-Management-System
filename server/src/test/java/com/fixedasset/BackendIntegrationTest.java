@@ -233,6 +233,201 @@ class BackendIntegrationTest {
                 .andExpect(jsonPath("$.data.total").value(1));
     }
 
+    @Test
+    @Order(8)
+    void purchaseLifecycleWorks() throws Exception {
+        String adminToken = login("admin", "123456");
+
+        mockMvc.perform(post("/api/suppliers")
+                        .header("Authorization", bearer(adminToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name":"测试供应商",
+                                  "code":"SUP-TEST",
+                                  "contactName":"测试联系人",
+                                  "status":"ACTIVE"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        String createResponse = mockMvc.perform(post("/api/purchases")
+                        .header("Authorization", bearer(adminToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "orderNo":"PO-TEST-001",
+                                  "supplierId":1,
+                                  "applicantId":4,
+                                  "orderDate":"2026-09-22",
+                                  "expectedDate":"2026-10-01",
+                                  "remark":"集成测试采购",
+                                  "items":[
+                                    {
+                                      "assetName":"测试采购资产",
+                                      "categoryId":4,
+                                      "quantity":2,
+                                      "unitPrice":1000,
+                                      "remark":"测试"
+                                    }
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("DRAFT"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        long purchaseId = objectMapper.readTree(createResponse).path("data").path("id").asLong();
+
+        mockMvc.perform(post("/api/purchases/{id}/submit", purchaseId)
+                        .header("Authorization", bearer(adminToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("PENDING"));
+
+        mockMvc.perform(post("/api/purchases/{id}/approve", purchaseId)
+                        .header("Authorization", bearer(adminToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("APPROVED"));
+    }
+
+    @Test
+    @Order(9)
+    void inboundConfirmCreatesAssets() throws Exception {
+        String adminToken = login("admin", "123456");
+
+        mockMvc.perform(post("/api/inbounds/1/confirm")
+                        .header("Authorization", bearer(adminToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.createdAssets").value(3))
+                .andExpect(jsonPath("$.data.order.status").value("CONFIRMED"));
+    }
+
+    @Test
+    @Order(10)
+    void maintenanceRecordRestoresAssetStatus() throws Exception {
+        String adminToken = login("admin", "123456");
+
+        String response = mockMvc.perform(post("/api/operations/maintenance-records")
+                        .header("Authorization", bearer(adminToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "maintenanceNo":"MT-TEST-001",
+                                  "assetId":6,
+                                  "maintenanceType":"REPAIR",
+                                  "description":"测试维修",
+                                  "cost":100,
+                                  "startDate":"2026-09-22",
+                                  "operatorId":2
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("PENDING"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        long recordId = objectMapper.readTree(response).path("data").path("id").asLong();
+
+        mockMvc.perform(post("/api/operations/maintenance-records/{id}/start", recordId)
+                        .header("Authorization", bearer(adminToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("PROCESSING"));
+
+        mockMvc.perform(get("/api/assets/6").header("Authorization", bearer(adminToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("MAINTENANCE"));
+
+        mockMvc.perform(post("/api/operations/maintenance-records/{id}/complete", recordId)
+                        .header("Authorization", bearer(adminToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "result":"维修完成",
+                                  "cost":150,
+                                  "endDate":"2026-09-22"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("COMPLETED"));
+
+        mockMvc.perform(get("/api/assets/6").header("Authorization", bearer(adminToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("IDLE"));
+    }
+
+    @Test
+    @Order(11)
+    void inventoryAndScrapLifecycleWork() throws Exception {
+        String adminToken = login("admin", "123456");
+
+        String inventoryResponse = mockMvc.perform(post("/api/operations/inventory-checks")
+                        .header("Authorization", bearer(adminToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "checkNo":"IC-TEST-001",
+                                  "checkName":"测试盘点",
+                                  "departmentId":2,
+                                  "checkDate":"2026-09-22",
+                                  "operatorId":2,
+                                  "remark":"集成测试"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("IN_PROGRESS"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        long inventoryId = objectMapper.readTree(inventoryResponse).path("data").path("id").asLong();
+
+        mockMvc.perform(post("/api/operations/inventory-checks/{id}/complete", inventoryId)
+                        .header("Authorization", bearer(adminToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("COMPLETED"));
+
+        String scrapResponse = mockMvc.perform(post("/api/operations/scraps")
+                        .header("Authorization", bearer(adminToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "scrapNo":"SC-TEST-001",
+                                  "assetId":3,
+                                  "reason":"测试报废",
+                                  "applicantId":4,
+                                  "remark":"集成测试"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("PENDING"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        long scrapId = objectMapper.readTree(scrapResponse).path("data").path("id").asLong();
+
+        mockMvc.perform(post("/api/operations/scraps/{id}/approve", scrapId)
+                        .header("Authorization", bearer(adminToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("APPROVED"));
+
+        mockMvc.perform(post("/api/operations/scraps/{id}/complete", scrapId)
+                        .header("Authorization", bearer(adminToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "disposalMethod":"环保回收",
+                                  "disposalAmount":50,
+                                  "remark":"处置完成"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("COMPLETED"));
+
+        mockMvc.perform(get("/api/assets/3").header("Authorization", bearer(adminToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("SCRAPPED"));
+    }
+
     private String login(String username, String password) throws Exception {
         String response = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
