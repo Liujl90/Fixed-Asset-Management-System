@@ -1,6 +1,6 @@
 <script setup>
 import { computed, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   CalendarClock,
   CheckCircle2,
@@ -12,16 +12,20 @@ import {
 } from 'lucide-vue-next'
 import {
   completeMaintenancePlan,
+  completeMaintenanceRecord,
   createMaintenancePlan,
+  createMaintenanceRecord,
   demoState,
   getAsset,
   runDepreciation,
   runMaintenanceCheck,
+  startMaintenanceRecord,
 } from '@/stores/backendStore'
 import { formatCurrency, formatDate } from '@/utils/format'
 
 const activeTab = ref('maintenance')
 const dialogVisible = ref(false)
+const recordDialogVisible = ref(false)
 const submitting = ref(false)
 const currentMonth = new Date().toISOString().slice(0, 7)
 const depreciationMonth = ref(currentMonth)
@@ -32,6 +36,15 @@ const form = reactive({
   planDate: new Date().toISOString().slice(0, 10),
   cycleMonths: 12,
   remark: '',
+})
+const recordForm = reactive({
+  maintenanceNo: '',
+  assetId: null,
+  maintenanceType: 'REPAIR',
+  description: '',
+  cost: 0,
+  startDate: new Date().toISOString().slice(0, 10),
+  operatorId: null,
 })
 
 const maintenanceRows = computed(() =>
@@ -47,6 +60,15 @@ const depreciationRows = computed(() =>
     ...item,
     assetName: getAsset(item.assetId)?.name || '-',
     assetNo: getAsset(item.assetId)?.assetNo || '-',
+  })),
+)
+
+const maintenanceRecordRows = computed(() =>
+  demoState.maintenanceRecords.map((item) => ({
+    ...item,
+    assetName: getAsset(item.assetId)?.name || '-',
+    assetNo: getAsset(item.assetId)?.assetNo || '-',
+    operatorName: demoState.employees.find((employee) => employee.id === item.operatorId)?.name || '-',
   })),
 )
 
@@ -107,6 +129,60 @@ async function triggerDepreciation() {
     ElMessage.success(`折旧计算完成，新增 ${result.created || 0} 条记录`)
   } catch (error) {
     ElMessage.error(error.message)
+  }
+}
+
+function openRecordCreate() {
+  Object.assign(recordForm, {
+    maintenanceNo: `MT-${new Date().getFullYear()}-${String(demoState.maintenanceRecords.length + 1).padStart(3, '0')}`,
+    assetId: null,
+    maintenanceType: 'REPAIR',
+    description: '',
+    cost: 0,
+    startDate: new Date().toISOString().slice(0, 10),
+    operatorId: demoState.employees[0]?.id || null,
+  })
+  recordDialogVisible.value = true
+}
+
+async function saveRecord() {
+  if (!recordForm.assetId || !recordForm.description || !recordForm.operatorId) {
+    ElMessage.warning('请完善维修记录')
+    return
+  }
+  try {
+    await createMaintenanceRecord({ ...recordForm })
+    recordDialogVisible.value = false
+    ElMessage.success('维修记录已创建')
+  } catch (error) {
+    ElMessage.error(error.message)
+  }
+}
+
+async function startRecord(row) {
+  try {
+    await startMaintenanceRecord(row.id)
+    ElMessage.success('维修已开始，资产状态已变为维修中')
+  } catch (error) {
+    ElMessage.error(error.message)
+  }
+}
+
+async function completeRecord(row) {
+  try {
+    const { value } = await ElMessageBox.prompt('请输入维修结果', '完成维修', {
+      confirmButtonText: '确认完成',
+      cancelButtonText: '取消',
+      inputPlaceholder: '例如：已更换模块并测试通过',
+    })
+    await completeMaintenanceRecord(row.id, {
+      result: value,
+      cost: row.cost,
+      endDate: new Date().toISOString().slice(0, 10),
+    })
+    ElMessage.success('维修已完成，资产状态已恢复')
+  } catch (error) {
+    if (error instanceof Error) ElMessage.error(error.message)
   }
 }
 </script>
@@ -234,6 +310,55 @@ async function triggerDepreciation() {
           </el-table>
           <el-empty v-if="!depreciationRows.length" description="尚未执行折旧任务" />
         </el-tab-pane>
+
+        <el-tab-pane :label="`维修记录 ${maintenanceRecordRows.length}`" name="maintenance-records">
+          <div class="tab-toolbar">
+            <el-button type="primary" @click="openRecordCreate">
+              <Plus :size="16" />
+              新增维修记录
+            </el-button>
+          </div>
+          <el-table :data="maintenanceRecordRows" stripe>
+            <el-table-column label="资产" min-width="220">
+              <template #default="{ row }">
+                <div class="table-primary compact">
+                  <div class="asset-symbol"><Wrench :size="17" /></div>
+                  <div><strong>{{ row.assetName }}</strong><span>{{ row.assetNo }}</span></div>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column prop="maintenanceNo" label="维修单号" width="130" />
+            <el-table-column prop="maintenanceType" label="类型" width="100" />
+            <el-table-column prop="description" label="故障说明" min-width="180" show-overflow-tooltip />
+            <el-table-column prop="operatorName" label="操作人" width="100" />
+            <el-table-column label="状态" width="100">
+              <template #default="{ row }">
+                <el-tag
+                  :type="row.status === 'completed' ? 'success' : row.status === 'processing' ? 'warning' : 'info'"
+                  round
+                >
+                  {{
+                    row.status === 'completed'
+                      ? '已完成'
+                      : row.status === 'processing'
+                        ? '维修中'
+                        : '待处理'
+                  }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="130" fixed="right">
+              <template #default="{ row }">
+                <el-button v-if="row.status === 'pending'" link type="primary" @click="startRecord(row)">
+                  开始维修
+                </el-button>
+                <el-button v-if="row.status === 'processing'" link type="success" @click="completeRecord(row)">
+                  完成维修
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
       </el-tabs>
     </section>
 
@@ -280,6 +405,49 @@ async function triggerDepreciation() {
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="submitting" @click="submitPlan">保存计划</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="recordDialogVisible" title="新增维修记录" width="580px" destroy-on-close>
+      <el-form :model="recordForm" label-position="top">
+        <el-form-item label="维修单号"><el-input v-model="recordForm.maintenanceNo" /></el-form-item>
+        <el-form-item label="选择资产">
+          <el-select v-model="recordForm.assetId" filterable>
+            <el-option
+              v-for="asset in demoState.assets.filter((item) => item.status !== 'scrapped')"
+              :key="asset.id"
+              :label="`${asset.assetNo} · ${asset.name}`"
+              :value="asset.id"
+            />
+          </el-select>
+        </el-form-item>
+        <div class="form-grid">
+          <el-form-item label="维修类型">
+            <el-select v-model="recordForm.maintenanceType">
+              <el-option label="维修" value="REPAIR" />
+              <el-option label="保养" value="MAINTENANCE" />
+              <el-option label="校准" value="CALIBRATION" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="操作人">
+            <el-select v-model="recordForm.operatorId">
+              <el-option v-for="item in demoState.employees" :key="item.id" :label="item.name" :value="item.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="预计费用">
+            <el-input-number v-model="recordForm.cost" :min="0" />
+          </el-form-item>
+          <el-form-item label="开始日期">
+            <el-date-picker v-model="recordForm.startDate" type="date" value-format="YYYY-MM-DD" />
+          </el-form-item>
+        </div>
+        <el-form-item label="故障说明">
+          <el-input v-model="recordForm.description" type="textarea" :rows="3" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="recordDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveRecord">保存</el-button>
       </template>
     </el-dialog>
   </div>

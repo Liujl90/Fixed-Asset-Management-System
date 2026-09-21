@@ -1095,6 +1095,30 @@ p {
   border-radius: var(--radius);
 }
 
+.tab-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 14px;
+}
+
+.order-item-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.4fr) minmax(120px, 1fr) 110px 130px auto;
+  gap: 8px;
+  align-items: start;
+  margin-bottom: 10px;
+}
+
+.order-item-row.inbound-row {
+  grid-template-columns:
+    minmax(140px, 1.4fr)
+    minmax(110px, 1fr)
+    minmax(110px, 1fr)
+    100px
+    120px
+    auto;
+}
+
 .operation-action-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1917,6 +1941,13 @@ p {
   .form-grid,
   .permission-checkboxes {
     grid-template-columns: 1fr;
+  }
+
+  .order-item-row,
+  .order-item-row.inbound-row {
+    grid-template-columns: 1fr;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
   }
 
   .span-two {

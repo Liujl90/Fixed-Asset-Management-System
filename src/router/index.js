@@ -10,6 +10,8 @@ import AssetsView from '@/views/AssetsView.vue'
 import LoansView from '@/views/LoansView.vue'
 import TransfersView from '@/views/TransfersView.vue'
 import OperationsView from '@/views/OperationsView.vue'
+import SupplyChainView from '@/views/SupplyChainView.vue'
+import InventoryScrapView from '@/views/InventoryScrapView.vue'
 import SystemView from '@/views/SystemView.vue'
 import MyAssetsView from '@/views/MyAssetsView.vue'
 import ProfileView from '@/views/ProfileView.vue'
@@ -76,6 +78,18 @@ const routes = [
         name: 'operations',
         component: OperationsView,
         meta: { title: '运维任务', permission: 'operations' },
+      },
+      {
+        path: 'supply-chain',
+        name: 'supply-chain',
+        component: SupplyChainView,
+        meta: { title: '采购与入库', permission: 'supply' },
+      },
+      {
+        path: 'inventory-scrap',
+        name: 'inventory-scrap',
+        component: InventoryScrapView,
+        meta: { title: '盘点与报废', permission: 'inventory' },
       },
       {
         path: 'system',

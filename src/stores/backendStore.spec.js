@@ -36,12 +36,17 @@ describe('backendStore permission compatibility', () => {
         'loan:manage',
         'maintenance:read',
         'depreciation:read',
+        'supplier:read',
+        'purchase:read',
+        'inventory:read',
       ],
     }
 
     expect(canAccess('assets')).toBe(true)
     expect(canAccess('loans')).toBe(true)
     expect(canAccess('operations')).toBe(true)
+    expect(canAccess('supply')).toBe(true)
+    expect(canAccess('inventory')).toBe(true)
     expect(canAccess('system')).toBe(false)
   })
 

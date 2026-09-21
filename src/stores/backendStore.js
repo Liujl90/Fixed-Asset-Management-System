@@ -28,6 +28,17 @@ const menuActionMap = {
   assets: ['asset:read', 'asset:write'],
   loans: ['loan:read', 'loan:manage', 'loan:apply', 'loan:return'],
   transfers: ['transfer:read', 'transfer:write'],
+  supply: [
+    'supplier:read',
+    'supplier:write',
+    'purchase:read',
+    'purchase:write',
+    'purchase:approve',
+    'inbound:read',
+    'inbound:write',
+  ],
+  inventory: ['inventory:read', 'inventory:write'],
+  scrap: ['scrap:read', 'scrap:write', 'scrap:approve'],
   operations: [
     'maintenance:read',
     'maintenance:write',
@@ -64,7 +75,13 @@ export const demoState = reactive({
   transferRecords: [],
   changeRecords: [],
   maintenancePlans: [],
+  maintenanceRecords: [],
   depreciationRecords: [],
+  suppliers: [],
+  purchaseOrders: [],
+  inboundOrders: [],
+  inventoryChecks: [],
+  scrapRecords: [],
   users: [],
   roles: [],
   permissions: [],
@@ -102,6 +119,14 @@ function normalizeTransfer(item) {
 }
 
 function normalizeMaintenancePlan(item) {
+  return { ...item, status: normalizeStatus(item.status) }
+}
+
+function normalizeMaintenanceRecord(item) {
+  return { ...item, status: normalizeStatus(item.status) }
+}
+
+function normalizeSimpleStatus(item) {
   return { ...item, status: normalizeStatus(item.status) }
 }
 
@@ -174,12 +199,39 @@ export async function loadAll() {
         params: { page: 1, size: 100 },
       })
       demoState.maintenancePlans = pageRecords(payload).map(normalizeMaintenancePlan)
+      const records = await api.get('/operations/maintenance-records', {
+        params: { page: 1, size: 100 },
+      })
+      demoState.maintenanceRecords = pageRecords(records).map(normalizeMaintenanceRecord)
     }),
     safeLoad('depreciation:read', async () => {
       const payload = await api.get('/operations/depreciations', {
         params: { page: 1, size: 100 },
       })
       demoState.depreciationRecords = pageRecords(payload)
+    }),
+    safeLoad('supplier:read', async () => {
+      demoState.suppliers = (await api.get('/suppliers')).map(normalizeSimpleStatus)
+    }),
+    safeLoad('purchase:read', async () => {
+      const payload = await api.get('/purchases', { params: { page: 1, size: 100 } })
+      demoState.purchaseOrders = pageRecords(payload).map(normalizeSimpleStatus)
+    }),
+    safeLoad('inbound:read', async () => {
+      const payload = await api.get('/inbounds', { params: { page: 1, size: 100 } })
+      demoState.inboundOrders = pageRecords(payload).map(normalizeSimpleStatus)
+    }),
+    safeLoad('inventory:read', async () => {
+      const payload = await api.get('/operations/inventory-checks', {
+        params: { page: 1, size: 100 },
+      })
+      demoState.inventoryChecks = pageRecords(payload).map(normalizeSimpleStatus)
+    }),
+    safeLoad('scrap:read', async () => {
+      const payload = await api.get('/operations/scraps', {
+        params: { page: 1, size: 100 },
+      })
+      demoState.scrapRecords = pageRecords(payload).map(normalizeSimpleStatus)
     }),
   ]
   await Promise.all(tasks)
@@ -456,6 +508,108 @@ export async function runMaintenanceCheck() {
   const result = await api.post('/operations/jobs/maintenance-check')
   await loadAll()
   return result
+}
+
+export async function createSupplier(payload) {
+  const item = await api.post('/suppliers', payload)
+  await loadAll()
+  return item
+}
+
+export async function updateSupplier(id, payload) {
+  const item = await api.put(`/suppliers/${id}`, payload)
+  await loadAll()
+  return item
+}
+
+export async function createPurchase(payload) {
+  const item = await api.post('/purchases', payload)
+  await loadAll()
+  return item
+}
+
+export async function updatePurchase(id, payload) {
+  const item = await api.put(`/purchases/${id}`, payload)
+  await loadAll()
+  return item
+}
+
+export async function submitPurchase(id) {
+  const item = await api.post(`/purchases/${id}/submit`)
+  await loadAll()
+  return item
+}
+
+export async function approvePurchase(id) {
+  const item = await api.post(`/purchases/${id}/approve`)
+  await loadAll()
+  return item
+}
+
+export async function createInbound(payload) {
+  const item = await api.post('/inbounds', payload)
+  await loadAll()
+  return item
+}
+
+export async function confirmInbound(id) {
+  const item = await api.post(`/inbounds/${id}/confirm`)
+  await loadAll()
+  return item
+}
+
+export async function cancelInbound(id) {
+  const item = await api.post(`/inbounds/${id}/cancel`)
+  await loadAll()
+  return item
+}
+
+export async function createMaintenanceRecord(payload) {
+  const item = await api.post('/operations/maintenance-records', payload)
+  await loadAll()
+  return item
+}
+
+export async function startMaintenanceRecord(id) {
+  const item = await api.post(`/operations/maintenance-records/${id}/start`)
+  await loadAll()
+  return item
+}
+
+export async function completeMaintenanceRecord(id, payload) {
+  const item = await api.post(`/operations/maintenance-records/${id}/complete`, payload)
+  await loadAll()
+  return item
+}
+
+export async function createInventoryCheck(payload) {
+  const item = await api.post('/operations/inventory-checks', payload)
+  await loadAll()
+  return item
+}
+
+export async function completeInventoryCheck(id) {
+  const item = await api.post(`/operations/inventory-checks/${id}/complete`)
+  await loadAll()
+  return item
+}
+
+export async function createScrap(payload) {
+  const item = await api.post('/operations/scraps', payload)
+  await loadAll()
+  return item
+}
+
+export async function approveScrap(id) {
+  const item = await api.post(`/operations/scraps/${id}/approve`)
+  await loadAll()
+  return item
+}
+
+export async function completeScrap(id, payload) {
+  const item = await api.post(`/operations/scraps/${id}/complete`, payload)
+  await loadAll()
+  return item
 }
 
 export async function exportAssets() {
