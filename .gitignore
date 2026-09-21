@@ -7,3 +7,4 @@ coverage/
 .tools/
 .env
 server/target/
+server/data/
