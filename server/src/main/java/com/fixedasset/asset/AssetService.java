@@ -20,6 +20,7 @@ import com.fixedasset.organization.mapper.EmployeeMapper;
 import com.fixedasset.security.SecurityUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.cache.annotation.CacheEvict;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -89,8 +90,16 @@ public class AssetService {
                 .orderByDesc(AssetChangeRecord::getCreatedAt));
     }
 
+    public List<Asset> listForExport(Long departmentId, String status) {
+        return assetMapper.selectList(Wrappers.<Asset>lambdaQuery()
+                .eq(departmentId != null, Asset::getDepartmentId, departmentId)
+                .eq(status != null && !status.isBlank(), Asset::getStatus, status)
+                .orderByAsc(Asset::getId));
+    }
+
     @Transactional
     @OperationLog(module = "固定资产", action = "登记资产")
+    @CacheEvict(cacheNames = "dashboardSummary", allEntries = true)
     public Asset create(Asset asset) {
         validate(asset, null);
         asset.setId(null);
@@ -104,6 +113,7 @@ public class AssetService {
 
     @Transactional
     @OperationLog(module = "固定资产", action = "编辑资产")
+    @CacheEvict(cacheNames = "dashboardSummary", allEntries = true)
     public Asset update(Long id, Asset payload) {
         Asset existing = require(id);
         validate(payload, id);
@@ -130,6 +140,7 @@ public class AssetService {
 
     @Transactional
     @OperationLog(module = "固定资产", action = "调整资产状态")
+    @CacheEvict(cacheNames = "dashboardSummary", allEntries = true)
     public Asset updateStatus(Long id, String status) {
         Asset asset = require(id);
         if (!ALLOWED_STATUSES.contains(status)) {
@@ -150,6 +161,7 @@ public class AssetService {
     }
 
     @OperationLog(module = "固定资产", action = "删除资产")
+    @CacheEvict(cacheNames = "dashboardSummary", allEntries = true)
     public void delete(Long id) {
         Asset asset = require(id);
         long loanCount = loanRecordMapper.selectCount(Wrappers.<LoanRecord>lambdaQuery()

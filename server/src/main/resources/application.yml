@@ -8,6 +8,15 @@ spring:
     time-zone: Asia/Shanghai
   flyway:
     locations: classpath:db/migration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: ${REDIS_DATABASE:0}
+  quartz:
+    job-store-type: memory
+    auto-startup: true
 
 mybatis-plus:
   configuration:
@@ -33,3 +42,8 @@ app:
   jwt:
     secret: ${JWT_SECRET:fixed-asset-demo-secret-key-change-me-2026}
     expiration-minutes: ${JWT_EXPIRATION_MINUTES:120}
+  cache:
+    provider: ${CACHE_PROVIDER:memory}
+  quartz:
+    depreciation-cron: ${DEPRECIATION_CRON:0 0 2 1 * ?}
+    maintenance-cron: ${MAINTENANCE_CRON:0 0 8 * * ?}

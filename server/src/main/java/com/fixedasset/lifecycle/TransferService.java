@@ -15,6 +15,7 @@ import com.fixedasset.organization.mapper.EmployeeMapper;
 import com.fixedasset.security.SecurityUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.cache.annotation.CacheEvict;
 
 import java.time.LocalDateTime;
 
@@ -45,6 +46,7 @@ public class TransferService {
 
     @Transactional
     @OperationLog(module = "资产调拨", action = "发起资产调拨")
+    @CacheEvict(cacheNames = "dashboardSummary", allEntries = true)
     public TransferRecord create(TransferCreateRequest request) {
         Asset asset = assetService.require(request.assetId());
         if (!"IN_USE".equals(asset.getStatus())) {

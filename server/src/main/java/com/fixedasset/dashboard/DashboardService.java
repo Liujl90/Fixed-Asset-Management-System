@@ -8,6 +8,7 @@ import com.fixedasset.asset.mapper.AssetMapper;
 import com.fixedasset.organization.entity.Department;
 import com.fixedasset.organization.mapper.DepartmentMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.cache.annotation.Cacheable;
 
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
@@ -31,6 +32,7 @@ public class DashboardService {
         this.departmentMapper = departmentMapper;
     }
 
+    @Cacheable(cacheNames = "dashboardSummary", key = "'summary'")
     public Map<String, Object> summary() {
         List<Asset> assets = assetMapper.selectList(Wrappers.<Asset>lambdaQuery()
                 .orderByAsc(Asset::getId));

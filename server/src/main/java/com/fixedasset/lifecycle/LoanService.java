@@ -16,6 +16,7 @@ import com.fixedasset.security.AuthenticatedUser;
 import com.fixedasset.security.SecurityUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.cache.annotation.CacheEvict;
 
 import java.time.LocalDateTime;
 
@@ -87,6 +88,7 @@ public class LoanService {
 
     @Transactional
     @OperationLog(module = "领用归还", action = "审批领用申请")
+    @CacheEvict(cacheNames = "dashboardSummary", allEntries = true)
     public LoanRecord approve(Long id) {
         LoanRecord record = require(id);
         if (!"PENDING".equals(record.getStatus())) {
@@ -151,6 +153,7 @@ public class LoanService {
 
     @Transactional
     @OperationLog(module = "领用归还", action = "确认资产归还")
+    @CacheEvict(cacheNames = "dashboardSummary", allEntries = true)
     public LoanRecord confirmReturn(Long id) {
         LoanRecord record = require(id);
         if (!"RETURN_PENDING".equals(record.getStatus())) {

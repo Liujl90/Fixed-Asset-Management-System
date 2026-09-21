@@ -8,6 +8,8 @@ import com.fixedasset.asset.mapper.AssetMapper;
 import com.fixedasset.common.aop.OperationLog;
 import com.fixedasset.common.exception.BusinessException;
 import org.springframework.stereotype.Service;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,6 +25,7 @@ public class CategoryService {
         this.assetMapper = assetMapper;
     }
 
+    @Cacheable(cacheNames = "assetCategoryList", key = "#keyword == null ? 'all' : #keyword")
     public List<AssetCategory> list(String keyword) {
         return categoryMapper.selectList(Wrappers.<AssetCategory>lambdaQuery()
                 .and(keyword != null && !keyword.isBlank(), query -> query
@@ -33,6 +36,7 @@ public class CategoryService {
     }
 
     @OperationLog(module = "资产分类", action = "新增分类")
+    @CacheEvict(cacheNames = "assetCategoryList", allEntries = true)
     public AssetCategory create(AssetCategory category) {
         validate(category, null);
         category.setId(null);
@@ -44,6 +48,7 @@ public class CategoryService {
     }
 
     @OperationLog(module = "资产分类", action = "编辑分类")
+    @CacheEvict(cacheNames = "assetCategoryList", allEntries = true)
     public AssetCategory update(Long id, AssetCategory category) {
         AssetCategory existing = require(id);
         validate(category, id);
@@ -57,6 +62,7 @@ public class CategoryService {
     }
 
     @OperationLog(module = "资产分类", action = "删除分类")
+    @CacheEvict(cacheNames = "assetCategoryList", allEntries = true)
     public void delete(Long id) {
         require(id);
         long children = categoryMapper.selectCount(Wrappers.<AssetCategory>lambdaQuery()

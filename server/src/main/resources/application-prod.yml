@@ -7,5 +7,9 @@ spring:
   flyway:
     enabled: true
 
+app:
+  cache:
+    provider: redis
+
 server:
   port: 8081

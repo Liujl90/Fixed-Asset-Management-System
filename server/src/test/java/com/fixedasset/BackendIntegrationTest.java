@@ -1,18 +1,32 @@
 package com.fixedasset;
 
+import com.alibaba.excel.EasyExcel;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fixedasset.asset.excel.AssetExcelRow;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.quartz.JobKey;
+import org.quartz.Scheduler;
+import org.quartz.impl.matchers.GroupMatcher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cache.CacheManager;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.io.ByteArrayOutputStream;
+import java.math.BigDecimal;
+import java.util.Set;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -20,6 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class BackendIntegrationTest {
 
     @Autowired
@@ -28,7 +43,14 @@ class BackendIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private CacheManager cacheManager;
+
+    @Autowired
+    private Scheduler scheduler;
+
     @Test
+    @Order(1)
     void adminCanLoginAndReadCoreApis() throws Exception {
         String token = login("admin", "123456");
 
@@ -48,6 +70,7 @@ class BackendIntegrationTest {
     }
 
     @Test
+    @Order(2)
     void employeeCannotCallManagementApi() throws Exception {
         String token = login("employee", "123456");
 
@@ -61,6 +84,7 @@ class BackendIntegrationTest {
     }
 
     @Test
+    @Order(3)
     void loanAndReturnFlowKeepsAssetStatusConsistent() throws Exception {
         String employeeToken = login("employee", "123456");
         String adminToken = login("admin", "123456");
@@ -104,6 +128,7 @@ class BackendIntegrationTest {
     }
 
     @Test
+    @Order(4)
     void transferUpdatesDepartmentAndOwner() throws Exception {
         String adminToken = login("admin", "123456");
 
@@ -125,6 +150,87 @@ class BackendIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.departmentId").value(3))
                 .andExpect(jsonPath("$.data.ownerId").value(3));
+    }
+
+    @Test
+    @Order(5)
+    void quartzJobsAndDepreciationWork() throws Exception {
+        String adminToken = login("admin", "123456");
+
+        Set<JobKey> jobKeys = scheduler.getJobKeys(GroupMatcher.anyGroup());
+        assertThat(jobKeys)
+                .extracting(JobKey::getName)
+                .contains("depreciationJob", "maintenanceDueCheckJob");
+
+        mockMvc.perform(post("/api/operations/jobs/depreciation")
+                        .header("Authorization", bearer(adminToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"month":"2026-09"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.created").isNumber());
+
+        mockMvc.perform(get("/api/operations/depreciations?page=1&size=10")
+                        .header("Authorization", bearer(adminToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").isNumber());
+
+        mockMvc.perform(post("/api/operations/jobs/maintenance-check")
+                        .header("Authorization", bearer(adminToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.updated").isNumber());
+    }
+
+    @Test
+    @Order(6)
+    void dashboardUsesCacheAndExcelCanExport() throws Exception {
+        String adminToken = login("admin", "123456");
+
+        mockMvc.perform(get("/api/dashboard/summary").header("Authorization", bearer(adminToken)))
+                .andExpect(status().isOk());
+        assertThat(cacheManager.getCache("dashboardSummary")).isNotNull();
+        assertThat(cacheManager.getCache("dashboardSummary").get("summary")).isNotNull();
+
+        mockMvc.perform(get("/api/assets/export").header("Authorization", bearer(adminToken)))
+                .andExpect(status().isOk())
+                .andExpect(result -> assertThat(result.getResponse().getContentType())
+                        .contains("spreadsheetml"));
+    }
+
+    @Test
+    @Order(7)
+    void excelImportCreatesAsset() throws Exception {
+        String adminToken = login("admin", "123456");
+        AssetExcelRow row = new AssetExcelRow();
+        row.setAssetNo("FA-IMPORT-001");
+        row.setName("Excel 导入测试资产");
+        row.setCategoryId(4L);
+        row.setBrandModel("Import Model");
+        row.setPurchaseDate("2026-09-01");
+        row.setOriginalValue(new BigDecimal("1000.00"));
+        row.setUsefulLife(5);
+        row.setDepartmentId(1L);
+        row.setStatus("IDLE");
+
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        EasyExcel.write(output, AssetExcelRow.class).sheet("固定资产").doWrite(java.util.List.of(row));
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "assets.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                output.toByteArray());
+
+        mockMvc.perform(multipart("/api/assets/import")
+                        .file(file)
+                        .header("Authorization", bearer(adminToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.imported").value(1));
+
+        mockMvc.perform(get("/api/assets?page=1&size=20&keyword=FA-IMPORT-001")
+                        .header("Authorization", bearer(adminToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1));
     }
 
     private String login(String username, String password) throws Exception {

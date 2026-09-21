@@ -1,5 +1,6 @@
 package com.fixedasset.asset;
 
+import com.fixedasset.asset.excel.AssetExcelService;
 import com.fixedasset.asset.entity.Asset;
 import com.fixedasset.asset.entity.AssetChangeRecord;
 import com.fixedasset.common.model.ApiResponse;
@@ -15,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+import jakarta.servlet.http.HttpServletResponse;
 
 import java.util.List;
 import java.util.Map;
@@ -24,9 +27,11 @@ import java.util.Map;
 public class AssetController {
 
     private final AssetService assetService;
+    private final AssetExcelService assetExcelService;
 
-    public AssetController(AssetService assetService) {
+    public AssetController(AssetService assetService, AssetExcelService assetExcelService) {
         this.assetService = assetService;
+        this.assetExcelService = assetExcelService;
     }
 
     @GetMapping
@@ -77,5 +82,21 @@ public class AssetController {
     public ApiResponse<Void> delete(@PathVariable Long id) {
         assetService.delete(id);
         return ApiResponse.ok();
+    }
+
+    @GetMapping("/export")
+    @PreAuthorize("hasAuthority('asset:read')")
+    public void export(
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) String status,
+            HttpServletResponse response
+    ) {
+        assetExcelService.exportAssets(response, departmentId, status);
+    }
+
+    @PostMapping("/import")
+    @PreAuthorize("hasAuthority('asset:write')")
+    public ApiResponse<Map<String, Object>> importAssets(@RequestParam("file") MultipartFile file) {
+        return ApiResponse.ok(Map.of("imported", assetExcelService.importAssets(file)));
     }
 }
