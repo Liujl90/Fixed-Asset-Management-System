@@ -18,7 +18,7 @@ import {
   demoState,
   getAsset,
   getAssetStatusMeta,
-} from '@/stores/demoStore'
+} from '@/stores/backendStore'
 import { formatCurrency, formatDate } from '@/utils/format'
 
 echarts.use([BarChart, PieChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer])

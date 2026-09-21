@@ -13,13 +13,13 @@ import {
 import {
   categoryName,
   demoState,
-} from '@/stores/demoStore'
+} from '@/stores/backendStore'
 import {
   getCurrentEmployee,
   getDepartment,
   myAssets,
   requestReturn,
-} from '@/stores/demoStore'
+} from '@/stores/backendStore'
 import { formatCurrency, formatDate } from '@/utils/format'
 
 const router = useRouter()
@@ -44,11 +44,11 @@ function loanForAsset(assetId) {
   return activeLoans.value.find((item) => item.assetId === assetId)
 }
 
-function handleReturn(asset) {
+async function handleReturn(asset) {
   const loan = loanForAsset(asset.id)
   if (!loan) return
   try {
-    requestReturn(loan.id)
+    await requestReturn(loan.id)
     ElMessage.success('归还申请已提交，等待管理员确认')
   } catch (error) {
     ElMessage.error(error.message)

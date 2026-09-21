@@ -21,7 +21,7 @@ import {
   employeeName,
   getAsset,
   updateAsset,
-} from '@/stores/demoStore'
+} from '@/stores/backendStore'
 import { formatCurrency, formatDate } from '@/utils/format'
 
 const filters = reactive({
@@ -139,10 +139,10 @@ async function submitForm() {
       ownerId: form.status === 'idle' ? null : form.ownerId,
     }
     if (editingId.value) {
-      updateAsset(editingId.value, payload)
+      await updateAsset(editingId.value, payload)
       ElMessage.success('资产信息已更新')
     } else {
-      addAsset(payload)
+      await addAsset(payload)
       ElMessage.success('资产已登记')
     }
     dialogVisible.value = false
@@ -162,7 +162,7 @@ async function remove(row) {
         type: 'warning',
       },
     )
-    deleteAsset(row.id)
+    await deleteAsset(row.id)
     ElMessage.success('资产已删除')
   } catch (error) {
     if (error instanceof Error) ElMessage.error(error.message)

@@ -14,7 +14,7 @@ import {
   departmentName,
   getEmployee,
   updateProfile,
-} from '@/stores/demoStore'
+} from '@/stores/backendStore'
 
 const saving = ref(false)
 const form = reactive({
@@ -41,7 +41,7 @@ watch(
 async function save() {
   saving.value = true
   try {
-    updateProfile({ ...form })
+    await updateProfile({ ...form })
     ElMessage.success('个人信息已保存')
   } catch (error) {
     ElMessage.error(error.message)

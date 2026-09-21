@@ -8,7 +8,7 @@ import {
   demoState,
   departmentName,
   updateEmployee,
-} from '@/stores/demoStore'
+} from '@/stores/backendStore'
 import { formatDate } from '@/utils/format'
 
 const filters = reactive({
@@ -67,10 +67,10 @@ async function submitForm() {
   try {
     await formRef.value?.validate()
     if (editingId.value) {
-      updateEmployee(editingId.value, { ...form })
+      await updateEmployee(editingId.value, { ...form })
       ElMessage.success('员工信息已更新')
     } else {
-      addEmployee({ ...form })
+      await addEmployee({ ...form })
       ElMessage.success('员工已创建')
     }
     dialogVisible.value = false
@@ -86,7 +86,7 @@ async function remove(row) {
       cancelButtonText: '取消',
       type: 'warning',
     })
-    deleteEmployee(row.id)
+    await deleteEmployee(row.id)
     ElMessage.success('员工已删除')
   } catch (error) {
     if (error instanceof Error) ElMessage.error(error.message)

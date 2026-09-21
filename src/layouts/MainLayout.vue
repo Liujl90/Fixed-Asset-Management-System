@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import {
   ArrowRightLeft,
   Bell,
@@ -13,7 +13,6 @@ import {
   LogOut,
   Menu,
   PackageOpen,
-  RefreshCcw,
   ShieldCheck,
   Tags,
   UserCircle,
@@ -22,10 +21,11 @@ import {
 } from 'lucide-vue-next'
 import {
   demoState,
+  canAccess,
+  isAdmin,
   logout,
-  resetDemo,
   switchDemoIdentity,
-} from '@/stores/demoStore'
+} from '@/stores/backendStore'
 
 const route = useRoute()
 const router = useRouter()
@@ -72,9 +72,11 @@ const employeeGroups = [
   },
 ]
 
-const menuGroups = computed(() =>
-  demoState.currentUser?.roleCode === 'ADMIN' ? adminGroups : employeeGroups,
-)
+const menuGroups = computed(() => {
+  if (demoState.currentUser?.roleCode === 'EMPLOYEE') return employeeGroups
+  if (isAdmin()) return adminGroups
+  return adminGroups.filter((group) => group.label !== '系统设置')
+})
 
 const currentTitle = computed(() => route.meta.title || '固定资产管理系统')
 const today = new Intl.DateTimeFormat('zh-CN', {
@@ -90,34 +92,15 @@ function navigate(path) {
 }
 
 async function handleSwitchIdentity() {
-  const user = switchDemoIdentity()
+  const user = await switchDemoIdentity()
   if (!user) return
-  await router.push(user.roleCode === 'ADMIN' ? '/dashboard' : '/my-assets')
+  await router.push(user.roleCode === 'EMPLOYEE' ? '/my-assets' : '/dashboard')
   ElMessage.success(`已切换为${user.roleName}身份`)
 }
 
-function handleLogout() {
-  logout()
+async function handleLogout() {
+  await logout()
   router.replace('/login')
-}
-
-async function handleReset() {
-  try {
-    await ElMessageBox.confirm(
-      '将恢复演示数据并返回登录页，本次体验中的修改会丢失。',
-      '重置演示数据',
-      {
-        confirmButtonText: '确认重置',
-        cancelButtonText: '取消',
-        type: 'warning',
-      },
-    )
-    resetDemo()
-    router.replace('/login')
-    ElMessage.success('演示数据已重置')
-  } catch {
-    // User cancelled the confirmation.
-  }
 }
 </script>
 
@@ -165,8 +148,8 @@ async function handleReset() {
         <div class="demo-note">
           <span class="status-dot" />
           <div>
-            <strong>交互演示模式</strong>
-            <small>数据仅保存在浏览器本地</small>
+            <strong>Spring Boot API</strong>
+            <small>JWT 认证 · 数据库持久化</small>
           </div>
         </div>
       </div>
@@ -185,13 +168,9 @@ async function handleReset() {
         </div>
 
         <div class="topbar-actions">
-          <button class="topbar-action" title="重置演示数据" @click="handleReset">
-            <RefreshCcw :size="18" />
-            <span>重置数据</span>
-          </button>
           <button class="topbar-action" title="切换体验身份" @click="handleSwitchIdentity">
             <ShieldCheck :size="18" />
-            <span>切换为{{ demoState.currentUser?.roleCode === 'ADMIN' ? '员工' : '管理员' }}</span>
+            <span>切换体验身份</span>
           </button>
           <button class="icon-button notification-button" aria-label="通知">
             <Bell :size="19" />

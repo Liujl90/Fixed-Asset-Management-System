@@ -6,3 +6,6 @@ spring:
     password: ${DB_PASSWORD:fixed_asset}
   flyway:
     enabled: true
+
+server:
+  port: 8081

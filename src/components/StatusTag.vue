@@ -4,7 +4,7 @@ import {
   getAssetStatusMeta,
   getLoanStatusMeta,
   getTransferStatusMeta,
-} from '@/stores/demoStore'
+} from '@/stores/backendStore'
 
 const props = defineProps({
   status: {

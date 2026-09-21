@@ -9,7 +9,7 @@ import {
   departmentName,
   employeeName,
   getAsset,
-} from '@/stores/demoStore'
+} from '@/stores/backendStore'
 import { formatDate } from '@/utils/format'
 
 const dialogVisible = ref(false)
@@ -63,7 +63,7 @@ function openCreate() {
 async function submitForm() {
   try {
     await formRef.value?.validate()
-    createTransfer({ ...form })
+    await createTransfer({ ...form })
     dialogVisible.value = false
     ElMessage.success('调拨完成，资产部门和负责人已同步更新')
   } catch (error) {

@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { canAccess, demoState } from '@/stores/demoStore'
+import { canAccess, demoState } from '@/stores/backendStore'
 import MainLayout from '@/layouts/MainLayout.vue'
 import LoginView from '@/views/LoginView.vue'
 import DashboardView from '@/views/DashboardView.vue'
@@ -26,7 +26,7 @@ const routes = [
     children: [
       {
         path: '',
-        redirect: () => (demoState.currentUser?.roleCode === 'ADMIN' ? '/dashboard' : '/my-assets'),
+        redirect: () => (canAccess('dashboard') ? '/dashboard' : '/my-assets'),
       },
       {
         path: 'dashboard',
@@ -110,7 +110,7 @@ router.beforeEach((to) => {
     return demoState.currentUser.roleCode === 'ADMIN' ? '/dashboard' : '/my-assets'
   }
   if (to.meta.permission && !canAccess(to.meta.permission)) {
-    return demoState.currentUser?.roleCode === 'ADMIN' ? '/dashboard' : '/my-assets'
+    return canAccess('dashboard') ? '/dashboard' : '/my-assets'
   }
   return true
 })

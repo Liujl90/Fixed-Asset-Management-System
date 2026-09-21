@@ -25,7 +25,7 @@ import {
   rejectLoan,
   requestReturn,
   submitLoanRequest,
-} from '@/stores/demoStore'
+} from '@/stores/backendStore'
 import { formatDate } from '@/utils/format'
 
 const isAdmin = computed(() => demoState.currentUser?.roleCode === 'ADMIN')
@@ -100,7 +100,7 @@ function openApply() {
 async function submitApply() {
   try {
     await formRef.value?.validate()
-    submitLoanRequest({
+    await submitLoanRequest({
       assetId: form.assetId,
       applicantId: currentEmployee.value.id,
       departmentId: form.departmentId,
@@ -114,9 +114,9 @@ async function submitApply() {
   }
 }
 
-function approve(record) {
+async function approve(record) {
   try {
-    approveLoan(record.id)
+    await approveLoan(record.id)
     ElMessage.success('领用已确认，资产状态已更新为在用')
   } catch (error) {
     ElMessage.error(error.message)
@@ -131,25 +131,25 @@ async function reject(record) {
       inputPlaceholder: '例如：资产需要重新检测',
       inputValue: '',
     })
-    rejectLoan(record.id, value)
+    await rejectLoan(record.id, value)
     ElMessage.success('申请已驳回')
   } catch (error) {
     if (error instanceof Error) ElMessage.error(error.message)
   }
 }
 
-function requestRecordReturn(record) {
+async function requestRecordReturn(record) {
   try {
-    requestReturn(record.id)
+    await requestReturn(record.id)
     ElMessage.success('归还申请已提交，等待管理员确认')
   } catch (error) {
     ElMessage.error(error.message)
   }
 }
 
-function confirmRecordReturn(record) {
+async function confirmRecordReturn(record) {
   try {
-    confirmReturn(record.id)
+    await confirmReturn(record.id)
     ElMessage.success('归还已确认，资产状态已更新为闲置')
   } catch (error) {
     ElMessage.error(error.message)

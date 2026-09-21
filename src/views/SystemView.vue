@@ -14,7 +14,7 @@ import {
   demoState,
   updateRole,
   updateUser,
-} from '@/stores/demoStore'
+} from '@/stores/backendStore'
 
 const activeTab = ref('users')
 const userDialogVisible = ref(false)
@@ -95,10 +95,10 @@ async function submitUser() {
   try {
     await userFormRef.value?.validate()
     if (editingUserId.value) {
-      updateUser(editingUserId.value, { ...userForm })
+      await updateUser(editingUserId.value, { ...userForm })
       ElMessage.success('用户信息已更新')
     } else {
-      addUser({ ...userForm })
+      await addUser({ ...userForm })
       ElMessage.success('用户已创建')
     }
     userDialogVisible.value = false
@@ -118,9 +118,9 @@ function openRoleEdit(row) {
   roleDialogVisible.value = true
 }
 
-function submitRole() {
+async function submitRole() {
   try {
-    updateRole(editingRoleId.value, { ...roleForm, permissions: [...roleForm.permissions] })
+    await updateRole(editingRoleId.value, { ...roleForm, permissions: [...roleForm.permissions] })
     roleDialogVisible.value = false
     ElMessage.success('角色权限已更新')
   } catch (error) {

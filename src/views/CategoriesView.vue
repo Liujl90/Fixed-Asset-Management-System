@@ -7,7 +7,7 @@ import {
   deleteCategory,
   demoState,
   updateCategory,
-} from '@/stores/demoStore'
+} from '@/stores/backendStore'
 
 const keyword = ref('')
 const dialogVisible = ref(false)
@@ -70,10 +70,10 @@ async function submitForm() {
   try {
     await formRef.value?.validate()
     if (editingId.value) {
-      updateCategory(editingId.value, { ...form })
+      await updateCategory(editingId.value, { ...form })
       ElMessage.success('分类已更新')
     } else {
-      addCategory({ ...form })
+      await addCategory({ ...form })
       ElMessage.success('分类已创建')
     }
     dialogVisible.value = false
@@ -89,7 +89,7 @@ async function remove(row) {
       cancelButtonText: '取消',
       type: 'warning',
     })
-    deleteCategory(row.id)
+    await deleteCategory(row.id)
     ElMessage.success('分类已删除')
   } catch (error) {
     if (error instanceof Error) ElMessage.error(error.message)

@@ -10,7 +10,7 @@ import {
   ShieldCheck,
   UserRound,
 } from 'lucide-vue-next'
-import { login } from '@/stores/demoStore'
+import { login } from '@/stores/backendStore'
 
 const router = useRouter()
 const route = useRoute()
@@ -21,7 +21,7 @@ const form = reactive({
 })
 
 function fillAccount(type) {
-  form.username = type === 'admin' ? 'admin' : 'employee'
+  form.username = type === 'admin' ? 'admin' : type === 'manager' ? 'manager' : 'employee'
   form.password = '123456'
 }
 
@@ -32,9 +32,9 @@ async function handleLogin() {
   }
   loading.value = true
   try {
-    const user = login(form.username.trim(), form.password)
+    const user = await login(form.username.trim(), form.password)
     ElMessage.success(`欢迎回来，${user.realName}`)
-    const fallback = user.roleCode === 'ADMIN' ? '/dashboard' : '/my-assets'
+    const fallback = user.roleCode === 'EMPLOYEE' ? '/my-assets' : '/dashboard'
     await router.replace(route.query.redirect || fallback)
   } catch (error) {
     ElMessage.error(error.message)
@@ -119,6 +119,17 @@ async function handleLogin() {
               <small>申请领用与归还</small>
             </span>
           </button>
+          <button
+            :class="{ active: form.username === 'manager' }"
+            type="button"
+            @click="fillAccount('manager')"
+          >
+            <ShieldCheck :size="20" />
+            <span>
+              <strong>资产管理员</strong>
+              <small>管理资产生命周期</small>
+            </span>
+          </button>
         </div>
 
         <el-form :model="form" label-position="top" size="large" @submit.prevent="handleLogin">
@@ -161,7 +172,7 @@ async function handleLogin() {
         </el-form>
 
         <div class="login-footnote">
-          当前为交互原型，数据保存在浏览器本地，不连接后端服务。
+          当前页面通过 JWT 连接 Spring Boot REST API，业务数据持久化到数据库。
         </div>
       </div>
     </section>

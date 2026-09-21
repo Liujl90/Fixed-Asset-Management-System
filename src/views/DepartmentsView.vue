@@ -8,7 +8,7 @@ import {
   demoState,
   employeeName,
   updateDepartment,
-} from '@/stores/demoStore'
+} from '@/stores/backendStore'
 
 const keyword = ref('')
 const dialogVisible = ref(false)
@@ -53,10 +53,10 @@ async function submitForm() {
   try {
     await formRef.value?.validate()
     if (editingId.value) {
-      updateDepartment(editingId.value, { ...form })
+      await updateDepartment(editingId.value, { ...form })
       ElMessage.success('部门信息已更新')
     } else {
-      addDepartment({ ...form })
+      await addDepartment({ ...form })
       ElMessage.success('部门已创建')
     }
     dialogVisible.value = false
@@ -72,7 +72,7 @@ async function remove(row) {
       cancelButtonText: '取消',
       type: 'warning',
     })
-    deleteDepartment(row.id)
+    await deleteDepartment(row.id)
     ElMessage.success('部门已删除')
   } catch (error) {
     if (error instanceof Error) ElMessage.error(error.message)
